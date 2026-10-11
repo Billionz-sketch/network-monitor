@@ -265,6 +265,58 @@ def set_rules():
     return jsonify(ok=True, rules=rules)
 
 
+def base_url():
+    proto = request.headers.get("X-Forwarded-Proto", request.scheme).split(",")[0].strip()
+    return f"{proto}://{request.host}"
+
+
+@app.route("/api/join-qr")
+def join_qr():
+    if not is_admin():
+        return jsonify(error="admin login required"), 401
+    from urllib.parse import quote
+    from qr import make_svg
+    url = base_url() + "/join.html" + (("?key=" + quote(CLIENT_KEY, safe="")) if CLIENT_KEY else "")
+    return jsonify(url=url, svg=make_svg(url))
+
+
+@app.route("/api/join-bat")
+def join_bat():
+    if not is_admin():
+        return jsonify(error="admin login required"), 401
+    from flask import Response
+    server = base_url()
+    key = CLIENT_KEY.replace("%", "%%").replace('"', "")
+    lines = [
+        "@echo off",
+        "title Network Monitor Agent",
+        f'set "SERVER={server}"',
+        f'set "KEY={key}"',
+        'cd /d "%~dp0"',
+        "py --version >nul 2>nul",
+        "if errorlevel 1 (",
+        "  echo Python is not installed. Install it from https://www.python.org/downloads/ then run this file again.",
+        "  pause",
+        "  exit /b 1",
+        ")",
+        "echo Preparing the monitor agent, please wait...",
+        "py -m pip install --quiet psutil",
+        "powershell -NoProfile -Command \"Invoke-WebRequest -UseBasicParsing '%SERVER%/agent.py' -OutFile agent.py\"",
+        "if not exist agent.py (",
+        "  echo Could not download the agent. Check the internet connection.",
+        "  pause",
+        "  exit /b 1",
+        ")",
+        "echo Connected devices appear on the dashboard. Keep this window open.",
+        'py agent.py --server "%SERVER%" --name "%COMPUTERNAME%" --key "%KEY%" --interval 20',
+        "pause",
+    ]
+    r = Response("\r\n".join(lines) + "\r\n", mimetype="application/octet-stream")
+    r.headers["Content-Disposition"] = 'attachment; filename="Join-Monitor.bat"'
+    r.headers["Cache-Control"] = "no-store"
+    return r
+
+
 @app.route("/api/probe")
 def probe():
     """64 KB payload so browser clients can measure their download speed."""
