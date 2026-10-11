@@ -265,6 +265,15 @@ def set_rules():
     return jsonify(ok=True, rules=rules)
 
 
+@app.route("/api/probe")
+def probe():
+    """64 KB payload so browser clients can measure their download speed."""
+    from flask import Response
+    r = Response(b"0" * 65536, mimetype="application/octet-stream")
+    r.headers["Cache-Control"] = "no-store"
+    return r
+
+
 @app.route("/api/health")
 def health():
     return jsonify(ok=True, clients=len(clients))

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Join as a client — Network Monitor</title><link rel="stylesheet" href="style.css"></head>
+<body><main class="wrap" style="max-width:520px;padding-top:28px">
+<div class="kicker">Browser client</div>
+<h1 style="font-size:26px;margin:8px 0">Join the monitor from this device</h1>
+<p class="lead" style="color:var(--text-dim)">This phone or computer will check in with the server and appear on the dashboard. Keep this page open and the screen on.</p>
+<div class="box" id="form">
+  <div style="display:grid;gap:10px">
+    <input type="text" id="name" placeholder="Device name, e.g. Joel's Phone" maxlength="40">
+    <input type="password" id="key" placeholder="Client key" autocomplete="off">
+    <select id="int"><option value="5">Check in every 5 s</option><option value="20" selected>Check in every 20 s</option></select>
+    <button class="btn" id="go">Start checking in</button>
+  </div>
+</div>
+<div class="box" id="live" hidden>
+  <div class="panel-title"><span id="st"><span class="dot live"></span>checking in</span><span id="n">0</span></div>
+  <div class="tt" id="info">starting…</div>
+  <p class="note" id="cmd"></p>
+  <button class="btn ghost" id="stop" style="margin-top:8px">Stop (device goes offline)</button>
+</div>
+<p class="note">Measured here: server round-trip latency, packet loss (failed requests), and download speed from a 64 KB test. A browser cannot read CPU or run shutdown commands; use the Python agent on a laptop for those.</p>
+<p class="note"><a href="/">← Back to dashboard</a></p>
+</main>
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i)};
+  var id; try{id=localStorage.getItem("nm_cid")}catch(e){}
+  if(!id){id=Math.random().toString(16).slice(2,14); try{localStorage.setItem("nm_cid",id)}catch(e){}}
+  try{$("name").value=localStorage.getItem("nm_name")||""}catch(e){}
+  var q=new URLSearchParams(location.search); if(q.get("key"))$("key").value=q.get("key");
+  var timer=null,beats=0,tries=[],results=[],wl=null,running=false;
+  function ua(){var u=navigator.userAgent;return /Android/.test(u)?"Android browser":/iPhone|iPad/.test(u)?"iOS browser":/Windows/.test(u)?"Windows browser":/Mac/.test(u)?"Mac browser":"Browser"}
+  async function sample(){
+    var lat=null,bw=0,ok=true,t0=performance.now();
+    try{
+      var r=await fetch("/api/probe?"+Date.now(),{cache:"no-store"}); var b=await r.arrayBuffer();
+      var dt=(performance.now()-t0)/1000; bw=b.byteLength/1024/dt;
+      var t1=performance.now(); await fetch("/api/health?"+Date.now(),{cache:"no-store"}); lat=performance.now()-t1;
+    }catch(e){ok=false}
+    tries.push(ok?0:1); if(tries.length>10)tries.shift();
+    var loss=100*tries.reduce(function(a,b){return a+b},0)/tries.length;
+    return {bw_in:Math.round(bw*10)/10,bw_out:0,pps:0,err_pct:0,latency:lat==null?null:Math.round(lat),loss:loss,cpu:0,mem:0};
+  }
+  async function beat(){
+    if(!running)return;
+    var stats=await sample(), iv=parseInt($("int").value,10);
+    var body={client_id:id,name:$("name").value.trim()||"Browser device",hostname:"",os:ua(),ip:"",interval:iv,stats:stats,top_talkers:[],protocols:{HTTPS:1},results:results};
+    try{
+      var r=await fetch("/api/heartbeat",{method:"POST",headers:{"Content-Type":"application/json","X-Client-Key":$("key").value},body:JSON.stringify(body)});
+      if(r.status===401){$("info").textContent="Wrong client key. Stop and try again.";}
+      else{
+        var j=await r.json(); results=[]; beats++; $("n").textContent=beats+" check-ins";
+        $("info").textContent="latency "+(stats.latency==null?"—":stats.latency+" ms")+" · download "+stats.bw_in.toFixed(0)+" KB/s · loss "+stats.loss.toFixed(0)+"%";
+        (j.commands||[]).forEach(function(c){
+          var ok=c.cmd==="status"; var msg=ok?"browser client alive, "+ua():"not supported in a browser client";
+          results.push({cmd:c.cmd,ok:ok,msg:msg}); $("cmd").textContent="Last command from admin: "+c.cmd+" → "+(ok?"OK":"not supported here");
+        });
+      }
+    }catch(e){$("info").textContent="cannot reach server, retrying…"}
+    if(running)timer=setTimeout(beat,iv*1000);
+  }
+  $("go").onclick=async function(){
+    if(!$("key").value.trim()){alert("Enter the client key");return}
+    try{localStorage.setItem("nm_name",$("name").value)}catch(e){}
+    running=true;$("form").hidden=true;$("live").hidden=false;
+    try{if(navigator.wakeLock)wl=await navigator.wakeLock.request("screen")}catch(e){}
+    beat();
+  };
+  $("stop").onclick=function(){running=false;clearTimeout(timer);try{wl&&wl.release()}catch(e){}$("live").hidden=true;$("form").hidden=false;};
+  document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible"&&running&&navigator.wakeLock)navigator.wakeLock.request("screen").then(function(l){wl=l}).catch(function(){})});
+})();
+</script></body></html>
