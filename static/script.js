@@ -97,6 +97,7 @@
     renderFeed();
     renderRules();
     renderDetail(admin);
+    if (admin) loadQr(); else qrLoaded = false;
   }
 
   function renderClients(admin) {
@@ -212,6 +213,30 @@
     api("/api/rules", { method: "POST", body: body }).then(function (j) {
       rulesDirty = false; $("rulesMsg").textContent = j.ok ? "Saved." : (j.error || "failed"); setTimeout(function () { $("rulesMsg").textContent = ""; }, 2500); poll();
     });
+  });
+
+  // QR + launcher (admin only)
+  var joinUrl = "", qrLoaded = false;
+  function loadQr() {
+    if (qrLoaded || !S || !S.admin) return;
+    qrLoaded = true;
+    api("/api/join-qr").then(function (r) {
+      if (r.svg) { $("qrBox").innerHTML = r.svg; joinUrl = r.url; }
+      else { qrLoaded = false; $("qrBox").textContent = r.error || "unavailable"; }
+    }).catch(function () { qrLoaded = false; });
+  }
+  $("batBtn").addEventListener("click", function () {
+    fetch(API + "/api/join-bat", { headers: { "X-Admin-Token": token } }).then(function (r) {
+      if (!r.ok) throw new Error("denied"); return r.blob();
+    }).then(function (b) {
+      var a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "Join-Monitor.bat";
+      document.body.appendChild(a); a.click(); a.remove();
+    }).catch(function () { $("joinMsg").className = "msg-err"; $("joinMsg").textContent = "Sign in again."; });
+  });
+  $("copyJoin").addEventListener("click", function () {
+    if (!joinUrl) return;
+    function done() { $("joinMsg").className = "msg-ok"; $("joinMsg").textContent = "Copied."; setTimeout(function () { $("joinMsg").textContent = ""; }, 1800); }
+    if (navigator.clipboard) navigator.clipboard.writeText(joinUrl).then(done, function () {}); else done();
   });
 
   // CSV report (built in the browser from the live state)

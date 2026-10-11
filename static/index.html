@@ -75,6 +75,16 @@
       <div class="panel-title"><span>Alert thresholds</span><button class="btn ghost" id="logoutBtn" style="padding:3px 10px;font-size:12px">Sign out</button></div>
       <div class="rules" id="rules"></div>
       <div class="row-form" style="margin-top:12px"><button class="btn" id="saveRules">Save thresholds</button><span id="rulesMsg" class="msg-ok"></span></div>
+      <div class="panel-title" style="margin-top:22px"><span>Add devices without typing a link</span></div>
+      <div class="adddev">
+        <div class="qrbox" id="qrBox"><span class="note">Loading…</span></div>
+        <div>
+          <p class="note" style="margin-top:0"><b>Phones:</b> point the camera at the code. The join page opens with the key already filled in.</p>
+          <p class="note"><b>Windows laptops:</b> download the launcher and double-click it on the laptop (needs Python installed). It installs what it needs, joins this server and starts checking in.</p>
+          <div class="row-form" style="margin-top:10px"><button class="btn" id="batBtn">Download Windows launcher</button><button class="btn ghost" id="copyJoin">Copy join link</button><span id="joinMsg" class="msg-ok"></span></div>
+          <p class="note">These contain your client key, so only share them with people you want on the network.</p>
+        </div>
+      </div>
       <p class="note">Commands available per client: status check, scheduled shutdown (10 s – 1 h, cancellable), log off, block / unblock an IP at the client's firewall. They run on the client's next check-in.</p>
     </div>
   </section>

@@ -110,3 +110,8 @@ footer{padding:30px 0 40px;color:var(--text-dimmer);font-size:12.5px;font-family
   .flow{grid-template-columns:1fr;}
   .kpi .value{font-size:22px;}
 }
+
+.adddev{display:grid;grid-template-columns:200px 1fr;gap:20px;align-items:start}
+.qrbox{background:#fff;padding:6px;width:200px;height:200px;display:flex;align-items:center;justify-content:center}
+.qrbox svg{width:100%;height:100%;display:block}
+@media (max-width:560px){.adddev{grid-template-columns:1fr}}
