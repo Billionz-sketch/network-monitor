@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Network Traffic Monitor — Live Client Dashboard</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topnav">
+  <div class="wrap">
+    <span class="brand">NET<b>MON</b> · IMT Enugu</span>
+    <a class="lnk" href="#dashboard">Dashboard</a>
+    <a class="lnk" href="#clients">Clients</a>
+    <a class="lnk" href="#alerts">Alerts</a>
+    <a class="lnk" href="#manage">Manage</a>
+    <a class="lnk" href="#connect">Connect a client</a>
+    <span class="spacer"></span>
+    <span class="pill" id="connPill"><span class="dot idle"></span>connecting…</span>
+    <span class="pill public" id="viewPill">Basic view</span>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="hero">
+    <div class="kicker">Interactive Visualization &amp; Reporting System</div>
+    <h1>Live network traffic monitoring for every connected device</h1>
+    <p>Each computer runs a small agent that checks in with this server every 20 seconds. This page shows who is online, how much traffic they use, how fast their connection is, and raises an alert when something goes wrong. Administrators sign in to see full details and send commands.</p>
+  </div>
+
+  <section id="dashboard">
+    <div class="kpis">
+      <div class="kpi"><div class="label">CLIENTS ONLINE</div><div class="value" id="kOnline">—<small> / —</small></div><div class="delta" id="kOnlineD"></div></div>
+      <div class="kpi"><div class="label">FLEET BANDWIDTH</div><div class="value" id="kBw">—<small> KB/s</small></div><div class="delta">all online clients</div></div>
+      <div class="kpi"><div class="label">AVG LATENCY</div><div class="value" id="kLat">—<small> ms</small></div><div class="delta">ping to the internet</div></div>
+      <div class="kpi"><div class="label">ALERTS (LAST HOUR)</div><div class="value" id="kAlerts">—</div><div class="delta">threshold breaches</div></div>
+    </div>
+    <div class="grid2">
+      <div class="panel"><div class="panel-title"><span>Fleet bandwidth — last 7 min</span><span id="bwNow"></span></div><canvas id="cBw"></canvas></div>
+      <div class="panel"><div class="panel-title"><span>Protocol mix</span><span>connections</span></div><canvas id="cProto"></canvas></div>
+    </div>
+  </section>
+
+  <section id="clients">
+    <h2>Connected clients</h2>
+    <p class="lead">A client is shown <b>online</b> while it keeps checking in, and flips to <b>offline</b> if it misses its check-ins. <span id="viewHint"></span></p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Client</th><th>Status</th><th>Bandwidth ↓ / ↑</th><th>Latency</th><th>Loss</th><th>CPU / Mem</th><th>Last seen</th><th class="adm">Admin actions</th></tr></thead>
+      <tbody id="clientRows"></tbody>
+    </table></div>
+    <div class="note" id="cmdMsg"></div>
+    <div id="detail"></div>
+  </section>
+
+  <section id="alerts">
+    <h2>Alerts &amp; event log</h2>
+    <p class="lead">Raised automatically when a client crosses a threshold, goes offline or comes back.</p>
+    <div class="box"><div class="feed" id="feed"></div></div>
+    <div class="row-form"><button class="btn ghost" id="csvBtn">Download CSV report</button></div>
+  </section>
+
+  <section id="manage">
+    <h2>Manage</h2>
+    <div class="box" id="loginBox">
+      <div class="panel-title"><span>Administrator sign-in</span></div>
+      <p class="lead" style="margin-bottom:12px">Signing in switches this page from the <b>basic view</b> to the <b>full view</b> (IP addresses, hostnames, top remote hosts) and unlocks remote commands.</p>
+      <form class="row-form" id="loginForm">
+        <input type="password" id="pw" placeholder="Admin password" autocomplete="current-password" required>
+        <button class="btn" type="submit">Sign in</button>
+        <span id="loginMsg" class="msg-err"></span>
+      </form>
+    </div>
+    <div class="box" id="adminBox" hidden>
+      <div class="panel-title"><span>Alert thresholds</span><button class="btn ghost" id="logoutBtn" style="padding:3px 10px;font-size:12px">Sign out</button></div>
+      <div class="rules" id="rules"></div>
+      <div class="row-form" style="margin-top:12px"><button class="btn" id="saveRules">Save thresholds</button><span id="rulesMsg" class="msg-ok"></span></div>
+      <p class="note">Commands available per client: status check, scheduled shutdown (10 s – 1 h, cancellable), log off, block / unblock an IP at the client's firewall. They run on the client's next check-in.</p>
+    </div>
+  </section>
+
+  <section id="connect">
+    <h2>Connect a client</h2>
+    <p class="lead">Any Windows, Mac or Linux computer can join. It needs Python 3 and one small package.</p>
+    <div class="flow">
+      <div><b>1 · Agent</b>measures bandwidth, latency, loss, CPU</div>
+      <div><b>2 · Heartbeat</b>sends it to this server every 20 s</div>
+      <div><b>3 · Server</b>aggregates, tracks presence, raises alerts</div>
+      <div><b>4 · Dashboard</b>this page, basic or full view</div>
+    </div>
+    <ol class="steps">
+      <li><b>Install the package</b> (once): <code>pip install psutil</code></li>
+      <li><b>Download the agent</b>: <a href="/agent.py" download>agent.py</a> — save it anywhere.</li>
+      <li><b>Run it</b> from that folder (change the name, and use the client key you were given):</li>
+    </ol>
+    <div class="code" id="cmdBox"><button class="btn ghost" id="copyBtn">Copy</button><span id="cmdText"></span></div>
+    <p class="note">The client appears in the table within seconds. Add <code>--dry-run</code> to try remote commands safely (nothing is executed). Press Ctrl+C to stop and watch it turn offline.</p>
+  </section>
+
+  <footer>Ejimba Joel Arinze · IMT/UNN/B.SC/CS/2022/039 · Supervisor: Dr. Chika Obi-Okonkwo · IMT Enugu, UNN · 2026</footer>
+</main>
+
+<script src="script.js"></script>
+</body>
+</html>
